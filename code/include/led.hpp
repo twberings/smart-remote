@@ -6,7 +6,13 @@ class Led {
 public:
   Led(int pin);
   void setState(LedState state);
+  void setCycleSpeed(int millis);
+  void update();
+
 private:
   int pin;
-  LedState state;
+  LedState state = LedState::OFF;
+  unsigned int cycleSpeed = 500;
+  void blink();
+  void breathe();
 };
