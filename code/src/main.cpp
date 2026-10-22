@@ -1,34 +1,42 @@
 #include "button.hpp"
+#include "eeprom.hpp"
 #include "led.hpp"
 #include <Arduino.h>
 
 Led led(D2);
 Button button(D7);
-int counter = 0;
+EEPROM eeprom(0x53);
 
 void setup() {
   Serial.begin(115200);
-  button.setOnPress([]() {
-    counter++;
-    Serial.print("Button pressed! Counter: ");
-    Serial.println(counter);
-    if (counter % 4 == 0) {
-      led.setState(LedState::OFF);
-    } else if (counter % 4 == 1) {
-      led.setState(LedState::ON);
-    } else if (counter % 4 == 2) {
-      led.setState(LedState::BLINKING);
-      led.setCycleSpeed(500);
-    } else if (counter % 4 == 3) {
-      led.setState(LedState::BREATHING);
-      led.setCycleSpeed(2000);
+
+  if (!Wire.begin()) {
+    while (1) {
+      Serial.println("Failed to initialize I2C");
+      delay(1000);
     }
+  }
+
+  if (!eeprom.begin()) {
+    while (1) {
+      Serial.println("Failed to initialize EEPROM");
+      delay(1000);
+    }
+  }
+
+  button.setOnPress([]() {
+    char ssid[WIFI_SSID_SIZE];
+    char password[WIFI_PASSWORD_SIZE];
+    eeprom.getWifiCredentials(ssid, password);
+    Serial.print("SSID: ");
+    Serial.println(ssid);
+    Serial.print("Password: ");
+    Serial.println(password);
   });
   button.setOnHold(
       []() {
-        Serial.println("Resetting counter.");
-        counter = 0;
-        led.setState(LedState::OFF);
+        eeprom.saveWifiCredentials("MySSID", "MyPassword");
+        Serial.println("Saved WiFi credentials to EEPROM");
       },
       2000);
 }
