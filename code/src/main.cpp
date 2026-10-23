@@ -1,11 +1,13 @@
 #include "button.hpp"
 #include "eeprom.hpp"
 #include "led.hpp"
+#include "remote.hpp"
 #include <Arduino.h>
 
 Led led(D2);
 Button button(D7);
 EEPROM eeprom(0x53);
+Remote remote(eeprom, led);
 
 void setup() {
   Serial.begin(115200);
@@ -25,23 +27,15 @@ void setup() {
   }
 
   button.setOnPress([]() {
-    char ssid[WIFI_SSID_SIZE];
-    char password[WIFI_PASSWORD_SIZE];
-    eeprom.getWifiCredentials(ssid, password);
-    Serial.print("SSID: ");
-    Serial.println(ssid);
-    Serial.print("Password: ");
-    Serial.println(password);
+    led.setState(LedState::BLINKING);
+    led.setCycleSpeed(200);
+    led.setTimeout(1000);
   });
-  button.setOnHold(
-      []() {
-        eeprom.saveWifiCredentials("MySSID", "MyPassword");
-        Serial.println("Saved WiFi credentials to EEPROM");
-      },
-      2000);
+  button.setOnHold([]() { eeprom.resetSignals(); }, 2000);
 }
 
 void loop() {
   led.update();
   button.update();
+  remote.update();
 }

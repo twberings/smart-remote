@@ -16,6 +16,7 @@ public:
   void saveSignal(Signal signal) override;
   uint16_t getSignalCount() override;
   Signal getSignal(int index) override;
+  void resetSignals();
   void saveWifiCredentials(const char *ssid, const char *password);
   void getWifiCredentials(char *ssid, char *password);
 

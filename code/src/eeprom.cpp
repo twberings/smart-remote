@@ -36,14 +36,19 @@ void EEPROM::decrementSignalCount() {
   }
 }
 
+void EEPROM::resetSignals() {
+  SignalCounter count;
+  count.value = 0;
+  eeprom.writeBlock(SIGNALS_ADDRESS, count.bytes, sizeof(count));
+  debugReadWrite(SIGNALS_ADDRESS, count.bytes, sizeof(count), true);
+}
+
 void EEPROM::saveWifiCredentials(const char *ssid, const char *password) {
   WifiCredentials credentials;
   strncpy(credentials.data.ssid, ssid, WIFI_SSID_SIZE);
   strncpy(credentials.data.password, password, WIFI_PASSWORD_SIZE);
   auto rv = eeprom.writeBlock(WIFI_CREDENTIALS_ADDRESS, credentials.bytes,
-                    sizeof(credentials));
-  debugReadWrite(WIFI_CREDENTIALS_ADDRESS, credentials.bytes,
-                 sizeof(credentials), true);
+                              sizeof(credentials));
   Serial.print("EEPROM writeBlock return value: ");
   Serial.println(rv);
 }

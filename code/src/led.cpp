@@ -1,12 +1,21 @@
 #include "led.hpp"
+#include "esp32-hal.h"
 #include <Arduino.h>
 
 Led::Led(int pin) : pin(pin) { pinMode(pin, OUTPUT); }
 
 void Led::setState(LedState state) { this->state = state; }
 void Led::setCycleSpeed(int millis) { this->cycleSpeed = millis; }
+void Led::setTimeout(int timeout) { this->timeout = millis() + timeout; }
 
 void Led::update() {
+  if (timeout > 0) {
+    if (millis() >= timeout) {
+      state = LedState::OFF;
+      timeout = 0;
+    }
+  }
+
   switch (state) {
   case LedState::OFF:
     analogWrite(pin, 0);
@@ -40,7 +49,8 @@ void Led::breathe() {
   const int maxBrightness = 255;
   const int minBrightness = 0;
   static int fadeAmount = 5;
-  static const unsigned int fadeTime = cycleSpeed / (2 * maxBrightness / fadeAmount);
+  static const unsigned int fadeTime =
+      cycleSpeed / (2 * maxBrightness / fadeAmount);
   unsigned long currentTime = millis();
   if (currentTime - lastUpdateTime >= fadeTime) {
     analogWrite(pin, brightness);
