@@ -1,6 +1,7 @@
 #pragma once
 #include "I2C_24LC1025.h"
 #include "istorage.hpp"
+#include <vector>
 
 #define WIFI_CREDENTIALS_ADDRESS 0x0000
 #define WIFI_SSID_SIZE 64
@@ -16,12 +17,15 @@ public:
   void saveSignal(Signal signal) override;
   uint16_t getSignalCount() override;
   Signal getSignal(int index) override;
+  void removeSignal(int index) override;
+  void renameSignal(int index, const std::string &newName) override;
   void resetSignals();
   void saveWifiCredentials(const char *ssid, const char *password);
   void getWifiCredentials(char *ssid, char *password);
 
 private:
   I2C_24LC1025 eeprom;
+  std::vector<uint16_t> signalAddresses;
 
   void incrementSignalCount();
   void decrementSignalCount();

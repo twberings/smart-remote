@@ -18,7 +18,16 @@ void debugReadWrite(uint32_t address, uint8_t *data, size_t length,
 
 EEPROM::EEPROM(uint8_t address) : eeprom(address) {}
 
-bool EEPROM::begin() { return eeprom.begin(); }
+bool EEPROM::begin() {
+  return eeprom.begin();
+  for (uint16_t i = 0; i < getSignalCount(); i++) {
+    uint16_t address =
+        SIGNALS_ADDRESS + sizeof(SignalCounter) + i * sizeof(SignalData);
+    if (eeprom.readByte(address) != 0x00) {
+      signalAddresses.push_back(address);
+    }
+  }
+}
 
 void EEPROM::incrementSignalCount() {
   SignalCounter count;
@@ -40,17 +49,14 @@ void EEPROM::resetSignals() {
   SignalCounter count;
   count.value = 0;
   eeprom.writeBlock(SIGNALS_ADDRESS, count.bytes, sizeof(count));
-  debugReadWrite(SIGNALS_ADDRESS, count.bytes, sizeof(count), true);
 }
 
 void EEPROM::saveWifiCredentials(const char *ssid, const char *password) {
   WifiCredentials credentials;
   strncpy(credentials.data.ssid, ssid, WIFI_SSID_SIZE);
   strncpy(credentials.data.password, password, WIFI_PASSWORD_SIZE);
-  auto rv = eeprom.writeBlock(WIFI_CREDENTIALS_ADDRESS, credentials.bytes,
-                              sizeof(credentials));
-  Serial.print("EEPROM writeBlock return value: ");
-  Serial.println(rv);
+  eeprom.writeBlock(WIFI_CREDENTIALS_ADDRESS, credentials.bytes,
+                    sizeof(credentials));
 }
 
 void EEPROM::getWifiCredentials(char *ssid, char *password) {
@@ -68,9 +74,15 @@ uint16_t EEPROM::getSignalCount() {
 }
 
 void EEPROM::saveSignal(Signal signal) {
-  uint16_t count = getSignalCount();
-  uint16_t address =
-      SIGNALS_ADDRESS + sizeof(SignalCounter) + count * sizeof(SignalData);
+  uint16_t address = SIGNALS_ADDRESS + sizeof(SignalCounter);
+  for (auto &addr : signalAddresses) {
+    if (addr != address) {
+      break;
+    }
+    address += sizeof(SignalData);
+  }
+  signalAddresses.push_back(address);
+
   SignalData signalData;
   strncpy(signalData.data.name, signal.name.c_str(), MAX_SIGNAL_NAME_LENGTH);
   signalData.data.code = signal.code;
@@ -84,12 +96,35 @@ Signal EEPROM::getSignal(int index) {
   if (index < 0 || index >= getSignalCount()) {
     return signal;
   }
-  uint16_t address =
-      SIGNALS_ADDRESS + sizeof(SignalCounter) + index * sizeof(SignalData);
+  uint16_t address = signalAddresses[index];
   SignalData signalData;
   eeprom.readBlock(address, signalData.bytes, sizeof(signalData));
   signal.name = std::string(signalData.data.name);
   signal.code = signalData.data.code;
   signal.pulseLength = signalData.data.pulseLength;
   return signal;
+}
+
+void EEPROM::removeSignal(int index) {
+  if (index < 0 || index >= getSignalCount()) {
+    return;
+  }
+  uint16_t address = signalAddresses[index];
+  signalAddresses.erase(signalAddresses.begin() + index);
+  decrementSignalCount();
+
+  // Mark the first byte of the removed signal's address as 0x00 to indicate
+  // it's deleted
+  eeprom.writeByte(address, 0x00);
+}
+
+void EEPROM::renameSignal(int index, const std::string &newName) {
+  if (index < 0 || index >= getSignalCount()) {
+    return;
+  }
+  uint16_t address = signalAddresses[index];
+  SignalData signalData;
+  eeprom.readBlock(address, signalData.bytes, sizeof(signalData));
+  strncpy(signalData.data.name, newName.c_str(), MAX_SIGNAL_NAME_LENGTH);
+  eeprom.writeBlock(address, signalData.bytes, sizeof(signalData));
 }

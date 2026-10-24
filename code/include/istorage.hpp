@@ -13,4 +13,6 @@ public:
   virtual void saveSignal(Signal signal) = 0;
   virtual uint16_t getSignalCount() = 0;
   virtual Signal getSignal(int index) = 0;
+  virtual void removeSignal(int index) = 0;
+  virtual void renameSignal(int index, const std::string &newName) = 0;
 };
