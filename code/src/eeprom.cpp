@@ -1,4 +1,6 @@
 #include "eeprom.hpp"
+#include <cstdint>
+#define DELETED_SIGNAL_BATCH 0xFF
 
 void debugReadWrite(uint32_t address, uint8_t *data, size_t length,
                     bool isWrite) {
@@ -23,7 +25,7 @@ bool EEPROM::begin() {
   for (uint16_t i = 0; i < getSignalCount(); i++) {
     uint16_t address =
         SIGNALS_ADDRESS + sizeof(SignalCounter) + i * sizeof(SignalData);
-    if (eeprom.readByte(address) != 0x00) {
+    if (eeprom.readByte(address) != DELETED_SIGNAL_BATCH) {
       signalAddresses.push_back(address);
     }
   }
@@ -73,7 +75,7 @@ uint16_t EEPROM::getSignalCount() {
   return count.value;
 }
 
-void EEPROM::saveSignal(Signal signal) {
+uint16_t EEPROM::saveSignal(Signal signal) {
   uint16_t address = SIGNALS_ADDRESS + sizeof(SignalCounter);
   for (auto &addr : signalAddresses) {
     if (addr != address) {
@@ -84,11 +86,12 @@ void EEPROM::saveSignal(Signal signal) {
   signalAddresses.push_back(address);
 
   SignalData signalData;
-  strncpy(signalData.data.name, signal.name.c_str(), MAX_SIGNAL_NAME_LENGTH);
+  signalData.data.batch = signal.batch;
   signalData.data.code = signal.code;
   signalData.data.pulseLength = signal.pulseLength;
   eeprom.writeBlock(address, signalData.bytes, sizeof(signalData));
   incrementSignalCount();
+  return address;
 }
 
 Signal EEPROM::getSignal(int index) {
@@ -99,7 +102,8 @@ Signal EEPROM::getSignal(int index) {
   uint16_t address = signalAddresses[index];
   SignalData signalData;
   eeprom.readBlock(address, signalData.bytes, sizeof(signalData));
-  signal.name = std::string(signalData.data.name);
+  signal.id = address;
+  signal.batch = signalData.data.batch;
   signal.code = signalData.data.code;
   signal.pulseLength = signalData.data.pulseLength;
   return signal;
@@ -113,18 +117,5 @@ void EEPROM::removeSignal(int index) {
   signalAddresses.erase(signalAddresses.begin() + index);
   decrementSignalCount();
 
-  // Mark the first byte of the removed signal's address as 0x00 to indicate
-  // it's deleted
-  eeprom.writeByte(address, 0x00);
-}
-
-void EEPROM::renameSignal(int index, const std::string &newName) {
-  if (index < 0 || index >= getSignalCount()) {
-    return;
-  }
-  uint16_t address = signalAddresses[index];
-  SignalData signalData;
-  eeprom.readBlock(address, signalData.bytes, sizeof(signalData));
-  strncpy(signalData.data.name, newName.c_str(), MAX_SIGNAL_NAME_LENGTH);
-  eeprom.writeBlock(address, signalData.bytes, sizeof(signalData));
+  eeprom.writeByte(address, DELETED_SIGNAL_BATCH);
 }

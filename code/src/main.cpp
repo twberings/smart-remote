@@ -26,12 +26,16 @@ void setup() {
     }
   }
 
+  if (!remote.begin()) {
+    while (1) {
+      Serial.println("Failed to initialize Remote");
+      delay(1000);
+    }
+  }
+
   button.setOnPress([]() {
-    led.setState(LedState::BLINKING);
-    led.setCycleSpeed(200);
-    led.setTimeout(1000);
   });
-  button.setOnHold([]() { eeprom.resetSignals(); }, 2000);
+  button.setOnHold([]() {}, 2000);
 }
 
 void loop() {

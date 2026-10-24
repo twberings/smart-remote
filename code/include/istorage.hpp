@@ -1,18 +1,18 @@
 #pragma once
-#include <string>
+#include <cstdint>
 
 struct Signal {
-  std::string name;
+  uint8_t batch;
+  uint16_t id;
   long code;
-  uint8_t pulseLength;
+  uint16_t pulseLength;
 };
 
 class IStorage {
 public:
   virtual ~IStorage() = default;
-  virtual void saveSignal(Signal signal) = 0;
+  virtual uint16_t saveSignal(Signal signal) = 0;
   virtual uint16_t getSignalCount() = 0;
   virtual Signal getSignal(int index) = 0;
   virtual void removeSignal(int index) = 0;
-  virtual void renameSignal(int index, const std::string &newName) = 0;
 };
