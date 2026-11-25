@@ -20,16 +20,17 @@ void Remote::loadSignals() {
   }
 }
 
-bool Remote::sendSignal(uint16_t id, uint8_t batch) {
+bool Remote::sendSignal(uint16_t id) {
   if (isRecording) {
     return false;
   }
   for (const auto &signal : signals) {
-    if (signal.id == id && signal.batch == batch) {
+    if (signal.id == id) {
       led.setCycleSpeed(200);
       led.setState(LedState::BLINKING);
       led.setTimeout(1000);
-      rcSwitch.enableTransmit(0);
+      radio.SetTx();
+      rcSwitch.enableTransmit(RECEIVE_PIN);
       rcSwitch.setPulseLength(signal.pulseLength);
       rcSwitch.send(signal.code, 24);
       Serial.print("Sent signal: ");
@@ -43,17 +44,18 @@ bool Remote::sendSignal(uint16_t id, uint8_t batch) {
   return false;
 }
 
-void Remote::recordSignal(uint8_t batch) {
+void Remote::recordSignal() {
   if (isRecording) {
     return;
   }
-  recordingBatch = batch;
   led.setCycleSpeed(1000);
   led.setState(LedState::BREATHING);
   isRecording = true;
   rcSwitch.enableReceive(RECEIVE_PIN);
   radio.SetRx();
 }
+
+void Remote::setBatch(uint8_t batch) { recordingBatch = batch; }
 
 void Remote::update() {
   if (isRecording) {
@@ -65,6 +67,7 @@ void Remote::update() {
       Signal newSignal;
       newSignal.code = code;
       newSignal.pulseLength = pulseLength;
+      newSignal.batch = recordingBatch;
       newSignal.id = storage.saveSignal(newSignal);
       signals.push_back(newSignal);
 

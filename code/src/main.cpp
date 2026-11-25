@@ -1,15 +1,22 @@
+// #include "WiFi.h"
 #include "button.hpp"
+#include "connectionhandler.hpp"
 #include "eeprom.hpp"
 #include "led.hpp"
 #include "remote.hpp"
-#include <Arduino.h>
+// #include "webapi.hpp"
+#include "OThreadCLI.h"
 
 Led led(D2);
 Button button(D7);
 EEPROM eeprom(0x53);
 Remote remote(eeprom, led);
+ConnectionHandler connectionHandler(eeprom, led);
+// WebServer server(80);
+// WebAPI webAPI(server, remote);
 
 void setup() {
+  OThread.begin();
   Serial.begin(115200);
 
   if (!Wire.begin()) {
@@ -34,12 +41,22 @@ void setup() {
   }
 
   button.setOnPress([]() {
+    led.setState(LedState::BREATHING);
+    led.setTimeout(5000);
   });
-  button.setOnHold([]() {}, 2000);
+  button.setOnHold([]() {
+    led.setState(LedState::BLINKING);
+    led.setTimeout(5000);
+  }, 2000);
+
+  remote.loadSignals();
+  // connectionHandler.startWifi();
 }
 
 void loop() {
+  // connectionHandler.update();
   led.update();
   button.update();
   remote.update();
+  // webAPI.update();
 }

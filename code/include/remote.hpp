@@ -15,8 +15,10 @@ class Remote {
 public:
   Remote(IStorage &storage, Led &led);
   void loadSignals();
-  bool sendSignal(uint16_t id, uint8_t batch = 0);
-  void recordSignal(uint8_t batch = 0);
+  std::vector<Signal> &getSignals() { return signals; }
+  bool sendSignal(uint16_t id);
+  void recordSignal();
+  void setBatch(uint8_t batch);
   bool begin();
   void update();
 

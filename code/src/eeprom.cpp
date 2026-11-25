@@ -21,14 +21,18 @@ void debugReadWrite(uint32_t address, uint8_t *data, size_t length,
 EEPROM::EEPROM(uint8_t address) : eeprom(address) {}
 
 bool EEPROM::begin() {
-  return eeprom.begin();
+  if (!eeprom.begin()) {
+    return false;
+  }
   for (uint16_t i = 0; i < getSignalCount(); i++) {
     uint16_t address =
         SIGNALS_ADDRESS + sizeof(SignalCounter) + i * sizeof(SignalData);
-    if (eeprom.readByte(address) != DELETED_SIGNAL_BATCH) {
+    uint8_t batch = eeprom.readByte(address);
+    if (batch != DELETED_SIGNAL_BATCH) {
       signalAddresses.push_back(address);
     }
   }
+  return true;
 }
 
 void EEPROM::incrementSignalCount() {
@@ -96,10 +100,10 @@ uint16_t EEPROM::saveSignal(Signal signal) {
 
 Signal EEPROM::getSignal(int index) {
   Signal signal;
-  if (index < 0 || index >= getSignalCount()) {
+  if (index < 0 || index >= signalAddresses.size()) {
     return signal;
   }
-  uint16_t address = signalAddresses[index];
+  uint16_t address = signalAddresses.at(index);
   SignalData signalData;
   eeprom.readBlock(address, signalData.bytes, sizeof(signalData));
   signal.id = address;
